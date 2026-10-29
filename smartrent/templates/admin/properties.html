@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block content %}
+<div class="d-flex gap-2 mb-3"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('properties.import_page') }}">Import from Excel</a></div>
+<div id="map" class="map mb-3" data-geojson="{{ url_for('api.properties_geojson') }}" data-detail-base="{{ url_for('properties.index') }}"></div>
+<table class="table">
+  <thead><tr><th>Property</th><th>Address</th><th class="text-end">Units</th><th class="text-end">Occupied</th><th class="text-end">Vacant</th><th class="text-end">Monthly rent roll</th></tr></thead>
+  <tbody>
+  {% for p, units, occ, vac, roll in rows %}
+    <tr><td><a href="{{ url_for('properties.detail', property_id=p.id) }}">{{ p.name }}</a>{% if p.lat is none %} <span class="badge text-bg-secondary">no map pin</span>{% endif %}</td>
+        <td>{{ p.address }}</td><td class="text-end">{{ units }}</td><td class="text-end">{{ occ }}</td><td class="text-end">{{ vac }}</td><td class="text-end">{{ roll|money }}</td></tr>
+  {% else %}<tr><td colspan="6" class="text-secondary">No properties yet. Add one below.</td></tr>{% endfor %}
+  </tbody>
+</table>
+<form method="post" class="card p-3">
+  <h2 class="h6">Add a property</h2>{{ csrf() }}
+  <div class="row g-2">
+    <div class="col-md-4"><label class="form-label">Name<input class="form-control" name="name" required maxlength="120"></label></div>
+    <div class="col-md-8"><label class="form-label">Address<input class="form-control" name="address" required maxlength="255"></label></div>
+    <div class="col-md-3"><label class="form-label">Latitude<input class="form-control" name="latitude" id="lat" inputmode="decimal" placeholder="optional"></label></div>
+    <div class="col-md-3"><label class="form-label">Longitude<input class="form-control" name="longitude" id="lng" inputmode="decimal" placeholder="optional"></label></div>
+    <div class="col-md-6 d-flex align-items-end"><small class="text-secondary">Tip: open a property later and click the map to drop the pin.</small></div>
+  </div>
+  <div><button class="btn btn-primary mt-2">Add property</button></div>
+</form>
+{% endblock %}

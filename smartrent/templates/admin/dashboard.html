@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block content %}
+<p class="text-secondary">As of {{ today|fmt_date }}.</p>
+<section class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.occupancy_rate }}%</b><span>Occupancy<br>{{ k.occupied }} of {{ k.units_total }} units</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.rent_roll|money }}</b><span>Monthly rent roll<br>{{ k.active_tenants }} active leases</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.billed_this_month|money }}</b><span>Billed this month</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.vacancy_loss|money }}</b><span>Vacancy loss / month<br>{{ k.vacant }} vacant, {{ k.maintenance }} in maintenance</span></div></div>
+</section>
+<div class="row g-3 mb-3">
+  <section class="col-lg-7"><div class="card p-3 h-100"><h2 class="h6">Billed per month, last 12 months</h2>
+    <div class="chart"><canvas data-chart="monthly"></canvas></div></div></section>
+  <section class="col-lg-5"><div class="card p-3 h-100"><h2 class="h6">What needs attention</h2>
+    <ul class="insights">{% for lvl, msg in insights %}<li class="i-{{ lvl }}">{{ msg }}</li>{% endfor %}</ul>
+    <form method="post" class="mt-auto">{{ csrf() }}<button class="btn btn-outline-secondary btn-sm">Run daily tasks now</button>
+      <small class="text-secondary d-block">Creates this month's charges and sends reminders. Normally runs by scheduler (<code>flask daily</code>).</small></form>
+  </div></section>
+</div>
+<div class="row g-3">
+  <section class="col-lg-6"><div class="card p-3 h-100"><h2 class="h6">Rent due in the next 7 days</h2>
+    {% if not upcoming %}<p class="text-secondary mb-0">Nothing due this week.</p>{% else %}
+    <table class="table table-sm"><thead><tr><th>Tenant</th><th>Unit</th><th>Due</th><th class="text-end">Amount</th></tr></thead><tbody>
+    {% for c, name, tid, unit_no, prop in upcoming %}
+      <tr><td><a href="{{ url_for('admin.tenant_detail', tenant_id=tid) }}">{{ name }}</a></td><td>{{ prop }} {{ unit_no }}</td><td>{{ c.due_date|fmt_date }}</td><td class="text-end">{{ c.amount|money }}</td></tr>
+    {% endfor %}</tbody></table>{% endif %}
+  </div></section>
+  <section class="col-lg-6"><div class="card p-3 h-100"><h2 class="h6">Leases ending soon or expired</h2>
+    {% if not ending %}<p class="text-secondary mb-0">No leases ending soon.</p>{% else %}
+    <table class="table table-sm"><thead><tr><th>Tenant</th><th>Unit</th><th>Ends</th></tr></thead><tbody>
+    {% for l, name, unit_no, prop in ending %}
+      <tr><td>{{ name }}</td><td>{{ prop }} {{ unit_no }}</td><td>{{ l.end_date|fmt_date }}{% if l.end_date < today %} <span class="badge text-bg-danger">expired</span>{% endif %}</td></tr>
+    {% endfor %}</tbody></table>{% endif %}
+  </div></section>
+</div>
+{% endblock %}

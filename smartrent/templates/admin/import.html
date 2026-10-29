@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block content %}
+<p><a href="{{ url_for('properties.index') }}">Back to properties</a></p>
+<div class="card p-3 mb-3">
+  <p>Upload an <b>.xlsx</b> with one row per unit. Columns: <code>property, address, latitude, longitude, unit_no, monthly_rent</code>.
+  New properties need an address. Latitude/longitude are optional but must come as a pair. Existing units get their rent updated.
+  <b>All rows are checked first. If any row is wrong, nothing is imported.</b></p>
+  <p><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('properties.import_template') }}">Download template</a></p>
+  <form method="post" enctype="multipart/form-data" class="d-flex gap-2">{{ csrf() }}
+    <input class="form-control" type="file" name="file" accept=".xlsx" required>
+    <button class="btn btn-primary">Import</button>
+  </form>
+</div>
+{% if result and not result.ok %}
+<div class="alert alert-danger"><b>Nothing was imported.</b> Fix these rows and upload again:
+  <ul class="mb-0">{% for e in result.errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+{% endif %}
+{% endblock %}

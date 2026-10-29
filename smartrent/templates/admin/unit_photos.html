@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block content %}
+<p><a href="{{ url_for('properties.detail', property_id=u.property_id) }}">Back to {{ u.property.name }}</a>
+  {% if u.status == 'vacant' %} · <a href="{{ url_for('listings.detail', unit_id=u.id) }}">View public listing</a>{% endif %}</p>
+<form method="post" enctype="multipart/form-data" class="card p-3 mb-3">{{ csrf() }}<input type="hidden" name="action" value="upload">
+  <h2 class="h6">Upload photos <small class="text-secondary">({{ u.photos|length }} of {{ max_photos }})</small></h2>
+  <div class="row g-2 align-items-end">
+    <div class="col-md-6"><label class="form-label w-100">Images (JPEG, PNG or WebP, 5 MB total per upload)
+      <input class="form-control" type="file" name="photos" accept="image/jpeg,image/png,image/webp" multiple required></label></div>
+    <div class="col-md-4"><label class="form-label w-100">Caption <small class="text-secondary">(optional)</small><input class="form-control" name="caption" maxlength="120" placeholder="e.g. Living room"></label></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100">Upload</button></div>
+  </div>
+</form>
+{% if not u.photos %}<p class="text-secondary">No photos yet. Units with photos get more inquiries.</p>{% endif %}
+<div class="row g-3">
+{% for ph in u.photos %}
+  <div class="col-sm-6 col-lg-4"><div class="card h-100">
+    <img class="listing-img" src="{{ url_for('listings.photo', filename=ph.filename) }}" alt="{{ ph.caption or '' }}">
+    <div class="p-2">
+      {% if loop.first %}<span class="badge text-bg-primary mb-1">Cover photo</span>{% endif %}
+      <form method="post" class="d-flex gap-1 mb-1">{{ csrf() }}<input type="hidden" name="action" value="caption"><input type="hidden" name="photo_id" value="{{ ph.id }}">
+        <input class="form-control form-control-sm" name="caption" maxlength="120" value="{{ ph.caption or '' }}" placeholder="Caption" aria-label="Caption">
+        <button class="btn btn-sm btn-outline-secondary">Save</button></form>
+      <div class="d-flex gap-1">
+        {% if not loop.first %}<form method="post">{{ csrf() }}<input type="hidden" name="action" value="cover"><input type="hidden" name="photo_id" value="{{ ph.id }}"><button class="btn btn-sm btn-outline-primary">Make cover</button></form>{% endif %}
+        <form method="post" data-confirm="Delete this photo?">{{ csrf() }}<input type="hidden" name="action" value="delete"><input type="hidden" name="photo_id" value="{{ ph.id }}"><button class="btn btn-sm btn-outline-danger">Delete</button></form>
+      </div>
+    </div>
+  </div></div>
+{% endfor %}
+</div>
+{% endblock %}

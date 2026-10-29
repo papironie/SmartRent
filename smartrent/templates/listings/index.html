@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<p class="text-secondary">{{ units|length }} unit{{ '' if units|length == 1 else 's' }} available now.
+  {% if not me %}<a href="{{ url_for('auth.register') }}">Create a free account</a> to send an inquiry or request a viewing.{% endif %}</p>
+<form class="row g-2 align-items-end mb-3">
+  <div class="col-sm-6 col-lg-3"><label class="form-label small mb-0" for="f-prop">Property</label>
+    <select class="form-select" id="f-prop" name="property"><option value="">All properties</option>
+      {% for id, name, n in props %}<option value="{{ id }}" {{ 'selected' if id == pid }}>{{ name }} ({{ n }})</option>{% endfor %}</select></div>
+  <div class="col-6 col-lg-2"><label class="form-label small mb-0" for="f-lo">Min rent</label>
+    <input class="form-control" id="f-lo" type="number" min="0" step="500" name="min_rent" value="{{ lo }}" placeholder="₱"></div>
+  <div class="col-6 col-lg-2"><label class="form-label small mb-0" for="f-hi">Max rent</label>
+    <input class="form-control" id="f-hi" type="number" min="0" step="500" name="max_rent" value="{{ hi }}" placeholder="₱"></div>
+  <div class="col-sm-6 col-lg-3"><label class="form-label small mb-0" for="f-sort">Sort</label>
+    <select class="form-select" id="f-sort" name="sort">{% for k, (label, _) in sorts.items() %}<option value="{{ k }}" {{ 'selected' if k == sort }}>{{ label }}</option>{% endfor %}</select></div>
+  <div class="col-auto"><button class="btn btn-primary">Search</button> <a class="btn btn-link" href="{{ url_for('listings.index') }}">Clear</a></div>
+</form>
+
+<div class="row g-3">
+{% for u in units %}
+  <div class="col-sm-6 col-xl-4">
+    <a class="card listing h-100 text-decoration-none text-reset" href="{{ url_for('listings.detail', unit_id=u.id) }}">
+      {% if u.photos %}<img class="listing-img" src="{{ url_for('listings.photo', filename=u.photos[0].filename) }}" alt="{{ u.photos[0].caption or ('Unit ' ~ u.unit_no) }}" loading="lazy">
+      {% else %}<div class="listing-img listing-empty">No photo yet</div>{% endif %}
+      <div class="p-3">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div><b>{{ u.property.name }}</b><br><span class="text-secondary">Unit {{ u.unit_no }}</span></div>
+          <div class="text-end"><b class="price">{{ u.monthly_rent|money }}</b><br><small class="text-secondary">per month</small></div>
+        </div>
+        <small class="text-secondary d-block mt-2">{{ u.property.address }} · by {{ u.property.owner.name }} · {{ u.photos|length }} photo{{ '' if u.photos|length == 1 else 's' }}</small>
+      </div>
+    </a>
+  </div>
+{% else %}
+  <p class="text-secondary">No units match. Try a wider rent range.</p>
+{% endfor %}
+</div>
+{% endblock %}

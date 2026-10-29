@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block content %}
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link {{ 'active' if not flt }}" href="{{ url_for('admin.inquiries') }}">All ({{ counts.values()|sum }})</a></li>
+  {% for k, v in statuses.items() %}<li class="nav-item"><a class="nav-link {{ 'active' if flt == k }}" href="{{ url_for('admin.inquiries', status=k) }}">{{ v }} ({{ counts.get(k, 0) }})</a></li>{% endfor %}
+</ul>
+<div class="table-responsive"><table class="table align-middle">
+  <thead><tr><th>Guest</th><th>Unit</th><th>Message</th><th>Viewing</th><th>Received</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for i, name, email, unit_no, unit_status, prop in rows %}
+    <tr><td>{{ name }}<br><small><a href="mailto:{{ email }}">{{ email }}</a>{% if i.phone %}<br>{{ i.phone }}{% endif %}</small></td>
+        <td><a href="{{ url_for('listings.detail', unit_id=i.unit_id) }}">{{ prop }} {{ unit_no }}</a>
+          {% if unit_status != 'vacant' %}<br><span class="badge text-bg-secondary">now {{ unit_status }}</span>{% endif %}</td>
+        <td class="small" style="max-width:24rem">{{ i.message }}</td>
+        <td>{{ i.viewing_date|fmt_date }}</td>
+        <td>{{ i.created_at|fmt_date }}</td>
+        <td><form method="post" action="{{ url_for('admin.inquiries', status=flt) }}" class="d-flex gap-1">{{ csrf() }}
+          <input type="hidden" name="inquiry_id" value="{{ i.id }}">
+          <select class="form-select form-select-sm w-auto" name="status" aria-label="Status">
+            {% for k, v in statuses.items() %}<option value="{{ k }}" {{ 'selected' if i.status == k }}>{{ v }}</option>{% endfor %}</select>
+          <button class="btn btn-sm btn-outline-primary">Save</button></form></td></tr>
+  {% else %}<tr><td colspan="6" class="text-secondary">No inquiries.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

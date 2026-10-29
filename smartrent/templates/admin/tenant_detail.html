@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import status_badge %}
+{% block content %}
+<p><a href="{{ url_for('admin.tenants') }}">All tenants</a></p>
+<section class="card p-3 mb-3"><div class="row">
+  <div class="col-md-4"><p>{{ status_badge(status, labels, badge) }}</p></div>
+  <dl class="col-md-8 row mb-0">
+    <dt class="col-4">Email</dt><dd class="col-8">{{ t.user.email }}</dd>
+    <dt class="col-4">Phone</dt><dd class="col-8">{{ t.phone }}</dd>
+    <dt class="col-4">Emergency contact</dt><dd class="col-8">{{ ((t.emergency_name or '') ~ ' ' ~ (t.emergency_phone or ''))|trim or '—' }}</dd>
+    <dt class="col-4">Last sign-in</dt><dd class="col-8">{{ t.user.last_login_at or 'Never' }}</dd>
+  </dl></div></section>
+<h2 class="h5">Leases</h2>
+<table class="table"><thead><tr><th>Unit</th><th>Period</th><th class="text-end">Rent</th><th class="text-end">Deposit</th><th>Status</th></tr></thead><tbody>
+{% for l, unit_no, prop in leases %}
+  <tr><td>{{ prop }} {{ unit_no }}</td><td>{{ l.start_date|fmt_date }} to {{ l.end_date|fmt_date }}</td><td class="text-end">{{ l.monthly_rent|money }}</td><td class="text-end">{{ l.deposit|money }}</td><td>{{ l.status|capitalize }}</td></tr>
+{% else %}<tr><td colspan="5"><a href="{{ url_for('admin.leases', tenant_id=t.id) }}">Create a lease for this tenant</a></td></tr>{% endfor %}
+</tbody></table>
+<h2 class="h5">Rent charges</h2>
+<table class="table"><thead><tr><th>Month</th><th>Unit</th><th>Due</th><th class="text-end">Amount</th></tr></thead><tbody>
+{% for c, unit_no, prop in charges %}
+  <tr><td>{{ c.period|month_label }}</td><td>{{ prop }} {{ unit_no }}</td><td>{{ c.due_date|fmt_date }}</td><td class="text-end">{{ c.amount|money }}</td></tr>
+{% else %}<tr><td colspan="4" class="text-secondary">No charges yet.</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

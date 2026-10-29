@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="table-responsive"><table class="table align-middle">
+  <thead><tr><th>Unit</th><th>Sent</th><th>Viewing date</th><th>Message</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for i in rows %}
+    <tr><td>{% if i.unit.status == 'vacant' %}<a href="{{ url_for('listings.detail', unit_id=i.unit_id) }}">{{ i.unit.property.name }} {{ i.unit.unit_no }}</a>
+            {% else %}{{ i.unit.property.name }} {{ i.unit.unit_no }} <small class="text-secondary">(no longer available)</small>{% endif %}</td>
+        <td>{{ i.created_at|fmt_date }}</td><td>{{ i.viewing_date|fmt_date }}</td>
+        <td class="small">{{ i.message }}</td>
+        <td><span class="badge text-bg-{{ badge[i.status] }}">{{ labels[i.status] }}</span></td></tr>
+  {% else %}<tr><td colspan="5" class="text-secondary">No inquiries yet. <a href="{{ url_for('listings.index') }}">Browse units for rent</a>.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

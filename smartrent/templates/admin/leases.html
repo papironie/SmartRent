@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block content %}
+{% set state_labels = {'active':'Active','ending':'Ends within ' ~ warn_days ~ ' days','expired':'Expired, still occupied','ended':'Ended'} %}
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link {{ 'active' if show != 'all' }}" href="?show=active">Active</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if show == 'all' }}" href="?show=all">All leases</a></li>
+</ul>
+<table class="table align-middle">
+  <thead><tr><th>Tenant</th><th>Unit</th><th>Start</th><th>End</th><th class="text-end">Rent</th><th>Due day</th><th>State</th><th></th></tr></thead>
+  <tbody>
+  {% for l, tenant, unit_no, prop, state in rows %}
+    <tr class="{{ 'table-warning' if state == 'ending' }}{{ 'table-danger' if state == 'expired' }}">
+      <td><a href="{{ url_for('admin.tenant_detail', tenant_id=l.tenant_id) }}">{{ tenant }}</a></td>
+      <td>{{ prop }} {{ unit_no }}</td><td>{{ l.start_date|fmt_date }}</td><td>{{ l.end_date|fmt_date }}</td>
+      <td class="text-end">{{ l.monthly_rent|money }}</td><td>{{ l.due_day }}</td><td>{{ state_labels[state] }}</td>
+      <td class="text-nowrap">
+        {% if l.status == 'active' %}
+        <form method="post" class="d-inline-flex gap-1">{{ csrf() }}<input type="hidden" name="lease_id" value="{{ l.id }}"><input type="hidden" name="action" value="renew">
+          <select class="form-select form-select-sm w-auto" name="months" aria-label="Extend by"><option value="6">+6 mo</option><option value="12" selected>+12 mo</option></select>
+          <button class="btn btn-sm btn-outline-primary">Renew</button></form>
+        <form method="post" class="d-inline" data-confirm="End this lease? The unit becomes vacant.">{{ csrf() }}<input type="hidden" name="lease_id" value="{{ l.id }}"><input type="hidden" name="action" value="end"><button class="btn btn-sm btn-outline-danger">End</button></form>
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}<tr><td colspan="8" class="text-secondary">No leases.</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+<form method="post" class="card p-3">
+  <h2 class="h6">Create a lease</h2>
+  {% if not free_tenants or not vacant %}
+    <p class="text-secondary mb-0">You need a tenant without a lease and a vacant unit. <a href="{{ url_for('admin.tenants') }}">Add a tenant</a> or <a href="{{ url_for('properties.index') }}">add a unit</a>.</p>
+  {% else %}
+  {{ csrf() }}<input type="hidden" name="action" value="create">
+  <div class="row g-2">
+    <div class="col-md-4"><label class="form-label">Tenant<select class="form-select" name="tenant_id" required>
+      {% for tid, name in free_tenants %}<option value="{{ tid }}" {{ 'selected' if preselect == tid }}>{{ name }}</option>{% endfor %}</select></label></div>
+    <div class="col-md-4"><label class="form-label">Unit<select class="form-select" name="unit_id" required>
+      {% for uid, no, rent, prop in vacant %}<option value="{{ uid }}">{{ prop }} {{ no }} ({{ rent|money }})</option>{% endfor %}</select></label></div>
+    <div class="col-md-2"><label class="form-label">Monthly rent<input class="form-control" type="number" name="monthly_rent" step="0.01" min="1" placeholder="Unit rate"></label></div>
+    <div class="col-md-2"><label class="form-label">Deposit<input class="form-control" type="number" name="deposit" step="0.01" min="0" value="0"></label></div>
+    <div class="col-md-3"><label class="form-label">Start<input class="form-control" type="date" name="start_date" required value="{{ default_start }}"></label></div>
+    <div class="col-md-3"><label class="form-label">End<input class="form-control" type="date" name="end_date" required value="{{ default_end }}"></label></div>
+    <div class="col-md-3"><label class="form-label">Rent due every (day)<input class="form-control" type="number" name="due_day" min="1" max="31" value="5" required></label></div>
+  </div>
+  <div><button class="btn btn-primary mt-2">Create lease</button></div>
+  {% endif %}
+</form>
+{% endblock %}

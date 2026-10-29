@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf, status_badge %}
+{% block content %}
+<form class="row g-2 mb-3">
+  <div class="col-md-5"><input class="form-control" type="search" name="q" placeholder="Search name or email" value="{{ search }}" aria-label="Search tenants"></div>
+  <div class="col-md-3"><select class="form-select" name="status" aria-label="Filter by status"><option value="">All statuses</option>
+    {% for k, v in labels.items() %}<option value="{{ k }}" {{ 'selected' if flt == k }}>{{ v }}</option>{% endfor %}</select></div>
+  <div class="col-auto"><button class="btn btn-outline-secondary">Filter</button></div>
+</form>
+<table class="table">
+  <thead><tr><th>Tenant</th><th>Unit</th><th>Lease ends</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for t, u, unit_no, prop, lease_end in rows %}
+    <tr><td><a href="{{ url_for('admin.tenant_detail', tenant_id=t.id) }}">{{ u.name }}</a><br><small class="text-secondary">{{ t.phone }}</small></td>
+        <td>{% if unit_no %}{{ prop }} {{ unit_no }}{% else %}<span class="text-secondary">No active lease</span>{% endif %}</td>
+        <td>{{ lease_end|fmt_date }}</td>
+        <td>{{ status_badge(statuses[t.id], labels, badge) }}</td></tr>
+  {% else %}<tr><td colspan="4" class="text-secondary">No tenants match.</td></tr>{% endfor %}
+  </tbody>
+</table>
+<form method="post" class="card p-3">
+  <h2 class="h6">Add a tenant</h2>{{ csrf() }}
+  <div class="row g-2">
+    <div class="col-md-4"><label class="form-label">Full name<input class="form-control" name="name" required maxlength="100"></label></div>
+    <div class="col-md-4"><label class="form-label">Email<input class="form-control" type="email" name="email" required maxlength="150"></label></div>
+    <div class="col-md-4"><label class="form-label">Phone<input class="form-control" name="phone" required maxlength="30"></label></div>
+    <div class="col-md-6"><label class="form-label">Emergency contact name<input class="form-control" name="emergency_name" maxlength="100"></label></div>
+    <div class="col-md-6"><label class="form-label">Emergency contact phone<input class="form-control" name="emergency_phone" maxlength="30"></label></div>
+  </div>
+  <div><button class="btn btn-primary mt-2">Add tenant</button></div>
+</form>
+{% endblock %}

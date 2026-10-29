@@ -1,0 +1,2 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+{% macro status_badge(s, labels, badge) %}<span class="badge text-bg-{{ badge[s] }}">{{ labels[s] }}</span>{% endmacro %}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<p class="text-secondary">Download as Excel (.xlsx) or CSV.</p>
+<table class="table align-middle"><tbody>
+{% for kind, label in reports.items() %}
+  <tr><td>{{ label }}</td>
+  <td class="text-end">
+    {% if kind == 'charges' %}<form class="d-inline-flex gap-1"><input class="form-control form-control-sm" type="month" id="rep-month" value="{{ month }}" aria-label="Month"></form>{% endif %}
+    <a class="btn btn-sm btn-outline-primary" data-month-link="{{ 1 if kind == 'charges' else '' }}" href="{{ url_for('reports.download', kind=kind, fmt='xlsx') }}">Excel</a>
+    <a class="btn btn-sm btn-outline-secondary" data-month-link="{{ 1 if kind == 'charges' else '' }}" href="{{ url_for('reports.download', kind=kind, fmt='csv') }}">CSV</a>
+  </td></tr>
+{% endfor %}
+  <tr><td><b>Analytics pack</b>: KPIs, monthly trend, forecast, lease expiry, tenure, rent by property, units and insights (one sheet each)</td>
+  <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('reports.analytics_pack') }}">Excel</a></td></tr>
+</tbody></table>
+{% endblock %}
+{% block scripts %}
+<script>
+  const m = document.getElementById('rep-month');
+  if (m) {
+    const sync = () => document.querySelectorAll('[data-month-link="1"]').forEach(a => {
+      const u = new URL(a.href, location.href); u.searchParams.set('month', m.value); a.href = u.pathname + u.search; });
+    m.addEventListener('change', sync); sync();
+  }
+</script>
+{% endblock %}

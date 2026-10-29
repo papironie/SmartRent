@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block content %}
+<p class="text-secondary">As of {{ today|fmt_date }}. Platform-wide numbers; each landlord manages their own properties.</p>
+<section class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ roles.get('landlord', 0) }}</b><span>Landlords<br>{{ properties }} properties, {{ total.units_total }} units</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ total.occupancy_rate }}%</b><span>Platform occupancy<br>{{ total.occupied }} of {{ total.units_total }} units</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ total.rent_roll|money }}</b><span>Rent roll / month<br>{{ total.active_tenants }} active leases</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ roles.get('guest', 0) }}</b><span>Guest accounts<br>{{ demand.views }} listing views, {{ demand.inquiries }} inquiries ({{ demand.days }} days)</span></div></div>
+</section>
+
+<section class="card p-3 mb-3"><h2 class="h6">Landlords</h2>
+  {% if not rows %}<p class="text-secondary mb-0">No landlords yet. <a href="{{ url_for('superadmin.users') }}">Create one</a>.</p>{% else %}
+  <div class="table-responsive"><table class="table align-middle mb-0">
+    <thead><tr><th>Landlord</th><th class="text-end">Properties</th><th class="text-end">Units</th><th style="min-width:10rem">Occupancy</th>
+      <th class="text-end">Rent roll</th><th class="text-end">Vacancy loss</th><th class="text-end">Tenants</th><th class="text-end">Open inquiries</th><th>Last sign-in</th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr class="{{ 'text-secondary' if not r.user.is_active }}">
+        <td>{{ r.user.name }}{% if not r.user.is_active %} <span class="badge text-bg-secondary">deactivated</span>{% endif %}<br><small>{{ r.user.email }}</small></td>
+        <td class="text-end">{{ r.properties }}</td>
+        <td class="text-end">{{ r.units_total }}</td>
+        <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" role="progressbar" aria-label="Occupancy" aria-valuenow="{{ r.occupancy_rate }}" aria-valuemin="0" aria-valuemax="100" style="height:.5rem">
+          <div class="progress-bar {{ 'bg-warning' if r.occupancy_rate < 70 else '' }}" style="width:{{ r.occupancy_rate }}%"></div></div><small>{{ r.occupancy_rate }}%</small></div></td>
+        <td class="text-end">{{ r.rent_roll|money }}</td>
+        <td class="text-end">{{ r.vacancy_loss|money }}</td>
+        <td class="text-end">{{ r.tenants }}</td>
+        <td class="text-end">{{ r.open_inquiries }}</td>
+        <td>{{ r.user.last_login_at|fmt_date }}</td></tr>
+    {% endfor %}</tbody></table></div>{% endif %}
+  <small class="text-secondary">To add a landlord, go to <a href="{{ url_for('superadmin.users') }}">User accounts</a>. Deactivating a landlord signs them out and hides their units from the public listings.</small>
+</section>
+
+<section class="card p-3"><h2 class="h6">Accounts by role</h2>
+  <div class="d-flex flex-wrap gap-3">{% for role, label in [('superadmin','Superadmins'),('landlord','Landlords'),('tenant','Tenants'),('guest','Guests')] %}
+    <a class="text-decoration-none" href="{{ url_for('superadmin.users', role=role) }}"><b class="fs-5">{{ roles.get(role, 0) }}</b> <span class="text-secondary">{{ label }}</span></a>{% endfor %}</div>
+</section>
+{% endblock %}

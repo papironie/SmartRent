@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block content %}
+<p><a href="{{ url_for('listings.index') }}">All available units</a></p>
+{% if not listed %}<div class="alert alert-secondary">Preview: this unit is not shown to the public
+  ({{ 'it is ' ~ u.status if u.status != 'vacant' else 'the landlord account is deactivated' }}).</div>{% endif %}
+<div class="row g-3 mb-3">
+  <section class="col-lg-8">
+    {% if u.photos %}
+    <div id="gallery" class="carousel slide card overflow-hidden">
+      <div class="carousel-inner">
+        {% for ph in u.photos %}
+        <div class="carousel-item {{ 'active' if loop.first }}">
+          <img class="gallery-img d-block w-100" src="{{ url_for('listings.photo', filename=ph.filename) }}" alt="{{ ph.caption or ('Photo ' ~ loop.index) }}">
+          {% if ph.caption %}<div class="carousel-caption"><span class="cap">{{ ph.caption }}</span></div>{% endif %}
+        </div>{% endfor %}
+      </div>
+      {% if u.photos|length > 1 %}
+      <button class="carousel-control-prev" type="button" data-bs-target="#gallery" data-bs-slide="prev"><span class="carousel-control-prev-icon" aria-hidden="true"></span><span class="visually-hidden">Previous</span></button>
+      <button class="carousel-control-next" type="button" data-bs-target="#gallery" data-bs-slide="next"><span class="carousel-control-next-icon" aria-hidden="true"></span><span class="visually-hidden">Next</span></button>
+      {% endif %}
+    </div>
+    {% if u.photos|length > 1 %}
+    <div class="d-flex gap-2 mt-2 flex-wrap">{% for ph in u.photos %}
+      <button type="button" class="thumb-btn" data-bs-target="#gallery" data-bs-slide-to="{{ loop.index0 }}" aria-label="Show photo {{ loop.index }}">
+        <img class="thumb" src="{{ url_for('listings.photo', filename=ph.filename) }}" alt=""></button>{% endfor %}</div>
+    {% endif %}
+    {% else %}<div class="card listing-empty gallery-img">No photos yet</div>{% endif %}
+  </section>
+  <section class="col-lg-4">
+    <div class="card p-3 mb-3">
+      <p class="mb-1 text-secondary">Monthly rent</p>
+      <p class="display-6 mb-2">{{ u.monthly_rent|money }}</p>
+      <dl class="row mb-0 small">
+        <dt class="col-4">Property</dt><dd class="col-8">{{ p.name }}</dd>
+        <dt class="col-4">Unit</dt><dd class="col-8">{{ u.unit_no }}</dd>
+        <dt class="col-4">Address</dt><dd class="col-8">{{ p.address }}</dd>
+        <dt class="col-4">Landlord</dt><dd class="col-8">{{ p.owner.name }}</dd>
+        <dt class="col-4">Deposit</dt><dd class="col-8">Usually 2 months of rent ({{ (u.monthly_rent * 2)|money }})</dd>
+      </dl>
+    </div>
+    <div class="card p-3">
+      <h2 class="h6">Interested?</h2>
+      {% if not me %}
+        <p class="mb-2">Sign in or create a free guest account to ask about this unit or request a viewing.</p>
+        <div class="d-flex gap-2">
+          <a class="btn btn-primary" href="{{ url_for('auth.register', next=request.path) }}">Create account</a>
+          <a class="btn btn-outline-secondary" href="{{ url_for('auth.login', next=request.path) }}">Sign in</a>
+        </div>
+      {% elif me.role == 'guest' %}
+        {% if open_inquiry %}
+          <p class="mb-0">You asked about this unit on {{ open_inquiry.created_at|fmt_date }}.
+            Status: <b>{{ 'Contacted' if open_inquiry.status == 'contacted' else 'Waiting for reply' }}</b>.
+            <a href="{{ url_for('listings.my_inquiries') }}">My inquiries</a></p>
+        {% else %}
+        <form method="post" action="{{ url_for('listings.inquire', unit_id=u.id) }}">{{ csrf() }}
+          <label class="form-label w-100">Message
+            <textarea class="form-control" name="message" rows="3" maxlength="1000" required>Hi, is {{ p.name }} {{ u.unit_no }} still available? I would like to see it.</textarea></label>
+          <label class="form-label w-100">Phone <small class="text-secondary">(optional)</small><input class="form-control" name="phone" maxlength="30"></label>
+          <label class="form-label w-100">Preferred viewing date <small class="text-secondary">(optional)</small>
+            <input class="form-control" type="date" name="viewing_date" min="{{ today.isoformat() }}"></label>
+          <button class="btn btn-primary w-100">Send inquiry</button>
+        </form>
+        {% endif %}
+      {% else %}
+        <p class="text-secondary mb-0">Inquiries are sent from guest accounts.</p>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% if p.lat is not none %}
+<section class="card p-3 mb-3"><h2 class="h6">Location</h2>
+  <div id="map" class="map" data-pin-lat="{{ p.lat }}" data-pin-lng="{{ p.lng }}"></div></section>
+{% endif %}
+{% if others %}
+<h2 class="h5">More available units at {{ p.name }}</h2>
+<div class="row g-3">{% for o in others %}
+  <div class="col-6 col-lg-3"><a class="card listing h-100 text-decoration-none text-reset" href="{{ url_for('listings.detail', unit_id=o.id) }}">
+    {% if o.photos %}<img class="listing-img sm" src="{{ url_for('listings.photo', filename=o.photos[0].filename) }}" alt="" loading="lazy">{% else %}<div class="listing-img sm listing-empty">No photo</div>{% endif %}
+    <div class="p-2"><b>Unit {{ o.unit_no }}</b><br><span class="price">{{ o.monthly_rent|money }}</span></div></a></div>
+{% endfor %}</div>
+{% endif %}
+{% endblock %}

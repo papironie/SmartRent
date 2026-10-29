@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block content %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <form class="d-flex gap-2"><input class="form-control" type="month" name="month" value="{{ month.strftime('%Y-%m') }}" aria-label="Month"><button class="btn btn-outline-secondary">Show</button></form>
+  <form method="post">{{ csrf() }}<input type="hidden" name="month" value="{{ month.strftime('%Y-%m') }}"><button class="btn btn-primary">Generate charges for {{ month|month_label }}</button></form>
+  <a class="btn btn-outline-secondary" href="{{ url_for('reports.download', kind='charges', fmt='xlsx', month=month.strftime('%Y-%m')) }}">Excel</a>
+  <a class="btn btn-outline-secondary" href="{{ url_for('reports.download', kind='charges', fmt='csv', month=month.strftime('%Y-%m')) }}">CSV</a>
+</div>
+<table class="table">
+  <thead><tr><th>Tenant</th><th>Unit</th><th>Due</th><th class="text-end">Amount</th></tr></thead>
+  <tbody>
+  {% for c, name, tid, unit_no, prop in rows %}
+    <tr><td><a href="{{ url_for('admin.tenant_detail', tenant_id=tid) }}">{{ name }}</a></td><td>{{ prop }} {{ unit_no }}</td><td>{{ c.due_date|fmt_date }}</td><td class="text-end">{{ c.amount|money }}</td></tr>
+  {% else %}<tr><td colspan="4" class="text-secondary">No charges for {{ month|month_label }}. Use Generate charges to bill active leases.</td></tr>{% endfor %}
+  </tbody>
+  <tfoot><tr><th colspan="3">Total billed</th><th class="text-end">{{ total|money }}</th></tr></tfoot>
+</table>
+<p class="text-secondary">Charges are rent statements. This version does not record payments.</p>
+{% endblock %}

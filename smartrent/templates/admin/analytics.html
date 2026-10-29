@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import status_badge %}
+{% block content %}
+<form class="d-flex flex-wrap align-items-center gap-2 mb-3" method="get">
+  <label class="text-secondary" for="property">Property</label>
+  <select class="form-select form-select-sm w-auto" id="property" name="property" onchange="this.form.submit()">
+    <option value="">All properties</option>
+    {% for id, name in props %}<option value="{{ id }}" {{ 'selected' if id == pid }}>{{ name }}</option>{% endfor %}
+  </select>
+  <noscript><button class="btn btn-sm btn-outline-secondary">Apply</button></noscript>
+  <a class="btn btn-sm btn-outline-primary ms-auto" href="{{ url_for('reports.analytics_pack', property=pid) if pid else url_for('reports.analytics_pack') }}">Export analytics (Excel)</a>
+</form>
+
+<section class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.occupancy_rate }}%</b><span>Occupancy<br>{{ k.occupied }} of {{ k.units_total }} units</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.economic_occupancy }}%</b><span>Economic occupancy<br>rent leased ÷ rent possible</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.rent_roll|money }}</b><span>Rent roll / month<br>avg {{ k.avg_rent|money }} per lease</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.billed_this_month|money }}</b><span>Billed this month<br>
+    {% if k.billed_change_pct is none %}no bills last month{% else %}<span class="{{ 'text-success' if k.billed_change_pct >= 0 else 'text-danger' }}">{{ '+' if k.billed_change_pct > 0 }}{{ k.billed_change_pct }}%</span> vs last month{% endif %}</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.vacancy_loss|money }}</b><span>Vacancy loss / month<br>{{ k.vacant }} vacant, {{ k.maintenance }} in maintenance</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.at_risk_rent|money }}</b><span>Rent at risk / month<br>{{ k.at_risk_leases }} lease(s) ending within 90 days</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.avg_tenure_months }} mo</b><span>Average tenure<br>of {{ k.active_tenants }} active leases</span></div></div>
+  <div class="col-6 col-lg-3"><div class="kpi"><b>{{ k.leases_expired }}</b><span>Expired, still active<br>{{ k.leases_ending }} more ending within 30 days</span></div></div>
+</section>
+
+<div class="row g-3 mb-3">
+  <section class="col-lg-6"><div class="card p-3"><h2 class="h6">Billed per month</h2><div class="chart"><canvas data-chart="monthly"></canvas></div></div></section>
+  <section class="col-lg-6"><div class="card p-3"><h2 class="h6">Occupancy trend (units billed ÷ all units)</h2><div class="chart"><canvas data-chart="trend"></canvas></div></div></section>
+  <section class="col-lg-6"><div class="card p-3"><h2 class="h6">Revenue forecast, next 6 months</h2><div class="chart"><canvas data-chart="forecast"></canvas></div>
+    <small class="text-secondary">Contracted = active leases covering that month. At risk = rent lost if leases ending before then are not renewed.</small></div></section>
+  <section class="col-lg-6"><div class="card p-3"><h2 class="h6">Leases ending, next 6 months</h2><div class="chart"><canvas data-chart="expiry"></canvas></div></div></section>
+  <section class="col-lg-6"><div class="card p-3"><h2 class="h6">Tenant tenure</h2><div class="chart"><canvas data-chart="tenure"></canvas></div></div></section>
+  <section class="col-lg-6"><div class="card p-3"><h2 class="h6">Unit occupancy</h2><div class="chart"><canvas data-chart="occupancy"></canvas></div></div></section>
+  {% if not pid %}
+  <section class="col-12"><div class="card p-3"><h2 class="h6">Rent roll vs vacancy loss, per property</h2><div class="chart"><canvas data-chart="property"></canvas></div></div></section>
+  {% endif %}
+</div>
+
+<div class="row g-3 mb-3">
+  <section class="col-lg-7"><div class="card p-3 h-100"><h2 class="h6">Rule-based insights</h2>
+    <ul class="insights">{% for lvl, msg in insights %}<li class="i-{{ lvl }}">{{ msg }}</li>{% endfor %}</ul>
+    <small class="text-secondary">These are IF-rules over the data. Not AI.</small></div></section>
+  <section class="col-lg-5"><div class="card p-3 h-100"><h2 class="h6">Tenants by lease status <small class="text-secondary">(all properties)</small></h2>
+    {% for k2, v in labels.items() if counts.get(k2) %}<p class="mb-1">{{ status_badge(k2, labels, badge) }} {{ counts[k2] }}</p>{% endfor %}</div></section>
+</div>
+
+<div class="row g-3 mb-3">
+  <section class="col-lg-5"><div class="card p-3 h-100"><h2 class="h6">Listing demand, last {{ demand.days }} days</h2>
+    <div class="row g-2 mb-2 text-center">
+      <div class="col-3"><b class="d-block fs-5">{{ demand.views }}</b><small class="text-secondary">views</small></div>
+      <div class="col-3"><b class="d-block fs-5">{{ demand.inquiries }}</b><small class="text-secondary">inquiries</small></div>
+      <div class="col-3"><b class="d-block fs-5">{{ demand.rate }}%</b><small class="text-secondary">inquiry rate</small></div>
+      <div class="col-3"><b class="d-block fs-5"><a href="{{ url_for('admin.inquiries', status='new') }}">{{ demand.open }}</a></b><small class="text-secondary">awaiting reply</small></div>
+    </div>
+    <div class="chart sm"><canvas data-chart="demand"></canvas></div></div></section>
+  <section class="col-lg-7"><div class="card p-3 h-100"><h2 class="h6">Demand per vacant unit</h2>
+    {% if not demand.rows %}<p class="text-secondary mb-0">No vacant units.</p>{% else %}
+    <div class="table-responsive"><table class="table table-sm mb-0">
+      <thead><tr><th>Unit</th><th class="text-end">Asking rent</th><th class="text-end">Photos</th><th class="text-end">Views</th><th class="text-end">Inquiries</th><th class="text-end">Rate</th></tr></thead>
+      <tbody>{% for r in demand.rows %}
+        <tr><td><a href="{{ url_for('listings.detail', unit_id=r.unit_id) }}">{{ r.property }} {{ r.unit_no }}</a></td>
+          <td class="text-end">{{ r.rent|money }}</td>
+          <td class="text-end {{ 'text-danger' if not r.photos }}">{{ r.photos }}</td>
+          <td class="text-end">{{ r.views }}</td><td class="text-end">{{ r.inquiries }}</td>
+          <td class="text-end">{{ (r.rate ~ '%') if r.rate is not none else '—' }}</td></tr>
+      {% endfor %}</tbody></table></div>
+    <small class="text-secondary">Many views but no inquiries usually means the price or the photos put people off.</small>{% endif %}
+  </div></section>
+</div>
+
+<section class="card p-3 mb-3"><h2 class="h6">Asking rent by property</h2>
+  {% if not rent_stats %}<p class="text-secondary mb-0">No units yet.</p>{% else %}
+  <div class="table-responsive"><table class="table table-sm mb-0">
+    <thead><tr><th>Property</th><th class="text-end">Units</th><th class="text-end">Min</th><th class="text-end">Median</th><th class="text-end">Mean</th><th class="text-end">Max</th><th class="text-end">Occupied avg</th><th class="text-end">Vacant avg</th></tr></thead>
+    <tbody>{% for r in rent_stats %}
+      <tr><td>{{ r.property }}</td><td class="text-end">{{ r.units }}</td><td class="text-end">{{ r.min|money }}</td><td class="text-end">{{ r.median|money }}</td>
+        <td class="text-end">{{ r['mean']|money }}</td><td class="text-end">{{ r['max']|money }}</td>
+        <td class="text-end">{{ r.occupied_avg|money if r.occupied_avg is not none else '—' }}</td>
+        <td class="text-end">{{ r.vacant_avg|money if r.vacant_avg is not none else '—' }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  <small class="text-secondary">A vacant average well above the occupied average suggests vacant units are priced too high.</small>{% endif %}
+</section>
+
+<section class="card p-3"><h2 class="h6">Unit performance</h2>
+  {% if not units %}<p class="text-secondary mb-0">No units yet.</p>{% else %}
+  <div class="table-responsive table-scroll"><table class="table table-sm table-hover mb-0">
+    <thead class="sticky-top"><tr><th>Unit</th><th>Status</th><th class="text-end">Asking rent</th><th class="text-end">vs property median</th><th>Tenant</th><th class="text-end">Tenure</th><th>Last billed</th><th class="text-end">Idle</th></tr></thead>
+    <tbody>{% for u in units %}
+      <tr><td>{{ u.property }} {{ u.unit_no }}</td>
+        <td><span class="badge text-bg-{{ {'occupied': 'success', 'vacant': 'secondary', 'maintenance': 'warning'}[u.status] }}">{{ u.status|capitalize }}</span></td>
+        <td class="text-end">{{ u.rent|money }}</td>
+        <td class="text-end {{ 'text-danger' if u.vs_median_pct >= 15 else ('text-primary' if u.vs_median_pct <= -15 else '') }}">{{ '+' if u.vs_median_pct > 0 }}{{ u.vs_median_pct }}%</td>
+        <td>{{ u.tenant or '—' }}</td>
+        <td class="text-end">{{ (u.tenure_months ~ ' mo') if u.tenure_months is not none else '—' }}</td>
+        <td>{{ u.last_billed|month_label if u.last_billed else 'Never' }}</td>
+        <td class="text-end">{{ (u.idle_months ~ ' mo') if u.idle_months is not none else '—' }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  <small class="text-secondary">Red = 15%+ above the property median, blue = 15%+ below. Idle = months since a not-occupied unit was last billed.</small>{% endif %}
+</section>
+{% endblock %}

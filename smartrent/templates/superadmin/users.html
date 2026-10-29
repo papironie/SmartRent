@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block content %}
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link {{ 'active' if not flt }}" href="{{ url_for('superadmin.users') }}">All ({{ counts.values()|sum }})</a></li>
+  {% for k, v in labels.items() %}<li class="nav-item"><a class="nav-link {{ 'active' if flt == k }}" href="{{ url_for('superadmin.users', role=k) }}">{{ v }}s ({{ counts.get(k, 0) }})</a></li>{% endfor %}
+</ul>
+<form method="post" action="{{ url_for('superadmin.users', role=flt) }}" class="card p-3 mb-3">{{ csrf() }}<input type="hidden" name="action" value="create">
+  <h2 class="h6">Create an account</h2>
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4"><label class="form-label w-100">Name<input class="form-control" name="name" required maxlength="100"></label></div>
+    <div class="col-md-4"><label class="form-label w-100">Email<input class="form-control" type="email" name="email" required></label></div>
+    <div class="col-md-2"><label class="form-label w-100">Role<select class="form-select" name="role"><option value="landlord">Landlord / owner</option><option value="superadmin">Superadmin</option></select></label></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100">Create</button></div>
+  </div>
+  <small class="text-secondary">A temporary password is shown once and emailed. Landlords then add their own properties and tenants; guests register themselves.</small>
+</form>
+<div class="table-responsive"><table class="table align-middle">
+  <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Last sign-in</th><th>Joined</th><th class="text-end">Actions</th></tr></thead>
+  <tbody>
+  {% for u in rows %}
+    <tr class="{{ 'text-secondary' if not u.is_active }}">
+      <td>{{ u.name }}{% if u.id == me_id %} <small>(you)</small>{% endif %}<br><small>{{ u.email }}</small></td>
+      <td><span class="badge text-bg-{{ badge[u.role] }}">{{ labels[u.role] }}</span></td>
+      <td>{% if u.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Deactivated</span>{% endif %}</td>
+      <td>{{ u.last_login_at|fmt_date }}</td>
+      <td>{{ u.created_at|fmt_date }}</td>
+      <td class="text-end text-nowrap">
+        {% if u.id != me_id %}
+        <form method="post" action="{{ url_for('superadmin.users', role=flt) }}" class="d-inline" data-confirm="Reset the password for {{ u.name }}?">{{ csrf() }}
+          <input type="hidden" name="action" value="reset_password"><input type="hidden" name="user_id" value="{{ u.id }}"><button class="btn btn-sm btn-outline-secondary">Reset password</button></form>
+        <form method="post" action="{{ url_for('superadmin.users', role=flt) }}" class="d-inline">{{ csrf() }}
+          <input type="hidden" name="action" value="toggle_active"><input type="hidden" name="user_id" value="{{ u.id }}">
+          <button class="btn btn-sm {{ 'btn-outline-success' if not u.is_active else 'btn-outline-warning' }}">{{ 'Reactivate' if not u.is_active else 'Deactivate' }}</button></form>
+        {% if u.role == 'guest' %}
+        <form method="post" action="{{ url_for('superadmin.users', role=flt) }}" class="d-inline" data-confirm="Delete guest {{ u.name }} and their inquiries?">{{ csrf() }}
+          <input type="hidden" name="action" value="delete_guest"><input type="hidden" name="user_id" value="{{ u.id }}"><button class="btn btn-sm btn-outline-danger">Delete</button></form>
+        {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

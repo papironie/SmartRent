@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import csrf %}
+{% block content %}
+<p><a href="{{ url_for('properties.index') }}">All properties</a></p>
+<div class="row g-3 mb-3">
+  <section class="col-lg-7">
+    <form method="post" class="card p-3 h-100">
+      <h2 class="h6">Details</h2>{{ csrf() }}<input type="hidden" name="action" value="save_property">
+      <div class="row g-2">
+        <div class="col-md-5"><label class="form-label">Name<input class="form-control" name="name" required value="{{ p.name }}"></label></div>
+        <div class="col-md-7"><label class="form-label">Address<input class="form-control" name="address" required value="{{ p.address }}"></label></div>
+        <div class="col-md-6"><label class="form-label">Latitude<input class="form-control" name="latitude" id="lat" value="{{ '%.6f'|format(p.lat) if p.lat is not none else '' }}"></label></div>
+        <div class="col-md-6"><label class="form-label">Longitude<input class="form-control" name="longitude" id="lng" value="{{ '%.6f'|format(p.lng) if p.lng is not none else '' }}"></label></div>
+      </div>
+      <div id="map" class="map mt-2" data-pin-lat="{{ p.lat if p.lat is not none else '' }}" data-pin-lng="{{ p.lng if p.lng is not none else '' }}" data-pick="1"></div>
+      <small class="text-secondary">Click the map to move the pin, then save.</small>
+      <div><button class="btn btn-primary mt-2">Save changes</button></div>
+    </form>
+  </section>
+  <section class="col-lg-5">
+    <div class="card p-3 mb-3" id="site" data-url="{{ url_for('api.property_site', property_id=p.id) }}" data-has-pin="{{ '1' if p.lat is not none else '' }}">
+      <h2 class="h6">Site conditions <small class="text-secondary">(OpenTopoData + Open-Meteo)</small></h2>
+      {% if p.lat is none %}<p class="text-secondary mb-0">Set a map location to see elevation and weather.</p>
+      {% else %}<dl class="row mb-0" id="site-body"><dd class="col-12 text-secondary">Loading…</dd></dl>{% endif %}
+    </div>
+    <div class="card p-3">
+      <h2 class="h6">Nearby properties <small class="text-secondary">(within {{ radius_km|round(1) }} km, PostGIS)</small></h2>
+      {% if p.lat is none %}<p class="text-secondary mb-0">No map location yet.</p>
+      {% elif not nearby %}<p class="text-secondary mb-0">None of your other properties are this close.</p>
+      {% else %}<ul class="list-unstyled mb-0">{% for n, m in nearby %}
+        <li><a href="{{ url_for('properties.detail', property_id=n.id) }}">{{ n.name }}</a> <span class="text-secondary">{{ '%.0f'|format(m) }} m away</span></li>{% endfor %}</ul>{% endif %}
+    </div>
+  </section>
+</div>
+
+<h2 class="h5">Units</h2>
+<table class="table align-middle">
+  <thead><tr><th>Unit</th><th>Photos</th><th>Tenant</th><th>Status &amp; rent</th></tr></thead>
+  <tbody>
+  {% for u, tenant, tid in units %}
+    <tr>
+      <td>{{ u.unit_no }}{% if u.status == 'vacant' %}<br><a class="small" href="{{ url_for('listings.detail', unit_id=u.id) }}">Public listing</a>{% endif %}</td>
+      <td><a href="{{ url_for('properties.unit_photos', property_id=p.id, unit_id=u.id) }}" class="d-inline-flex align-items-center gap-2 text-decoration-none">
+        {% if u.photos %}<img class="thumb" src="{{ url_for('listings.photo', filename=u.photos[0].filename) }}" alt="">{% endif %}
+        <span>{{ u.photos|length }} photo{{ '' if u.photos|length == 1 else 's' }}</span></a></td>
+      <td>{% if tenant %}<a href="{{ url_for('admin.tenant_detail', tenant_id=tid) }}">{{ tenant }}</a>{% else %}<span class="text-secondary">None</span>{% endif %}</td>
+      <td>
+        <form method="post" class="d-inline-flex gap-1">{{ csrf() }}<input type="hidden" name="action" value="update_unit"><input type="hidden" name="unit_id" value="{{ u.id }}">
+          <select class="form-select form-select-sm w-auto" name="status" aria-label="Status of unit {{ u.unit_no }}">
+            {% for k, v in [('vacant','Vacant'),('occupied','Occupied'),('maintenance','Under maintenance')] %}<option value="{{ k }}" {{ 'selected' if u.status == k }}>{{ v }}</option>{% endfor %}
+          </select>
+          <input class="form-control form-control-sm" style="width:9rem" type="number" name="monthly_rent" step="0.01" min="1" value="{{ u.monthly_rent }}" aria-label="Rent">
+          <button class="btn btn-sm btn-outline-primary">Save</button>
+        </form>
+        {% if not tenant %}
+        <form method="post" class="d-inline" data-confirm="Delete unit {{ u.unit_no }}?">{{ csrf() }}<input type="hidden" name="action" value="delete_unit"><input type="hidden" name="unit_id" value="{{ u.id }}"><button class="btn btn-sm btn-outline-danger">Delete</button></form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<form method="post" class="card p-3 mb-3">
+  <h2 class="h6">Add a unit</h2>{{ csrf() }}<input type="hidden" name="action" value="add_unit">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4"><label class="form-label">Unit number<input class="form-control" name="unit_no" required maxlength="20"></label></div>
+    <div class="col-md-4"><label class="form-label">Monthly rent<input class="form-control" type="number" name="monthly_rent" step="0.01" min="1" required></label></div>
+    <div class="col-md-4"><button class="btn btn-primary">Add unit</button></div>
+  </div>
+</form>
+<form method="post" data-confirm="Delete this property? Only works if it has no units.">{{ csrf() }}<input type="hidden" name="action" value="delete_property"><button class="btn btn-outline-danger">Delete property</button></form>
+{% endblock %}

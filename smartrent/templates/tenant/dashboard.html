@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% from '_macros.html' import status_badge %}
+{% block content %}
+<section class="card p-3 mb-3"><div class="row">
+  <div class="col-md-5">
+    {% if lease %}
+      <p class="mb-1 text-secondary">Monthly rent</p><p class="display-6 mb-1">{{ lease[0].monthly_rent|money }}</p>
+      <p>{% if next_charge %}Next due {{ next_charge.due_date|fmt_date }}{% else %}No upcoming charge yet.{% endif %}</p>
+      <p>{{ status_badge(status, labels, badge) }}</p>
+    {% else %}<p class="lead mb-0">You have no active lease.</p>{% endif %}
+  </div>
+  {% if lease %}
+  <dl class="col-md-7 row mb-0">
+    <dt class="col-4">Unit</dt><dd class="col-8">{{ lease[2] }}, {{ lease[1] }}</dd>
+    <dt class="col-4">Address</dt><dd class="col-8">{{ lease[3] }}</dd>
+    <dt class="col-4">Rent due</dt><dd class="col-8">on the {{ lease[0].due_day|ordinal }} of each month</dd>
+    <dt class="col-4">Lease</dt><dd class="col-8">{{ lease[0].start_date|fmt_date }} to {{ lease[0].end_date|fmt_date }}</dd>
+    <dt class="col-4">Deposit</dt><dd class="col-8">{{ lease[0].deposit|money }}</dd>
+  </dl>{% endif %}
+</div></section>
+<div class="row g-3">
+  <section class="col-lg-6"><div class="card p-3 h-100"><h2 class="h6">Rent statements</h2>
+    <table class="table table-sm"><thead><tr><th>Month</th><th>Due</th><th class="text-end">Amount</th></tr></thead><tbody>
+    {% for c in charges %}<tr><td>{{ c.period|month_label }}</td><td>{{ c.due_date|fmt_date }}</td><td class="text-end">{{ c.amount|money }}</td></tr>
+    {% else %}<tr><td colspan="3" class="text-secondary">No statements yet.</td></tr>{% endfor %}</tbody></table></div></section>
+  <section class="col-lg-6"><div class="card p-3 h-100"><h2 class="h6">Notifications</h2>
+    <ul class="list-unstyled mb-0">{% for n in notes %}
+      <li class="mb-2 {{ 'fw-semibold' if n.id in unread }}">{{ n.message }} <small class="text-secondary">{{ n.created_at.strftime('%b') }} {{ n.created_at.day }}</small></li>
+    {% else %}<li class="text-secondary">No notifications.</li>{% endfor %}</ul></div></section>
+</div>
+{% endblock %}
