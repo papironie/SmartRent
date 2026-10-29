@@ -231,15 +231,4 @@ Known gaps (say them before the panel does):
 
 Every member must be able to open their files and explain them line by line.
 
-## 9. Defense questions you will get
 
-| Question | Answer lives in |
-|---|---|
-| Why PostGIS for a rental system? | `Property.location`, the nearby query in `routes/properties.py::detail`, `/api/properties.geojson` |
-| What if billing runs twice? | `UNIQUE (lease_id, period)` + `ON CONFLICT DO NOTHING` |
-| What if two admins lease the same unit? | Row lock (`with_for_update`) + partial unique index `uq_active_lease_unit` |
-| What happens if OpenTopoData or Open-Meteo is down? | `services/geo.py` returns `None`, the panel shows a warning, the page still loads |
-| Where is the integration? | Section 4 table |
-| Why Flask and not Django? | Small app, we wanted to see routing, sessions and CSRF ourselves |
-| Is this AI? | No. Rule-based insights. See `analytics.insights` |
-| Where are payments? | Out of scope on purpose. Section 5 |
